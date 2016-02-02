@@ -1,0 +1,30 @@
+31-JAN-2016 Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
+
+THE 32 BIT VERSION of the PLUG-IN IS UNTESTED!!!!!
+
+-Manually Install the Plug-in
+-- You need to discover where Wireshark looks for Plug-ins.
+-- Open the Wireshark GUI.
+-- Goto the Help Menu.
+-- Open the "About Wireshark Menu".
+-- Click on the Plugins tab.
+-- Look and see where the other plugins are located.
+-- When I installed the Wireshark via the installer, Wireshark was
+-- expecting the plug-ins in the the directory:
+-- C:\Program Files\Wireshark\plugins\<version>\
+--
+-- copy the file: openhpsdr.dll
+-- to wherever Wireshark is looking for plug-ins.
+--
+
+-Validate Plug-in Installation
+--Open the Wireshark GUI.
+-- Goto the Help Menu.
+-- Open the "About Wireshark Menu".
+-- Click on the Plugins tab.
+-- Find "openhpsdr.dll" in the "Name" column.
+-- You can also validate the version of the plug-in 
+-- in the "Version" column.
+--
+-- Finally capture and disassemble some traffic!
+
