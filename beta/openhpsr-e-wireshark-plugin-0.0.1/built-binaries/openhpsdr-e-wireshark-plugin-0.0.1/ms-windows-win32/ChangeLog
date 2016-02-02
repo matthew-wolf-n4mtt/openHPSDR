@@ -1,0 +1,13 @@
+31-JAN-2016 Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
+
+Version 0.0.1:
+* Initial Beta Version
+
+  - Wireshark version 2.0.1 
+  - There is disassembly of Erase Reply. Erase Reply is Command Reply command 
+    0x03 from the Hardware.
+  - The rest of the Command Reply protocol (port 1024) is disassembled
+  - The other protocols are not full disassembled.
+  - The other protocols are identfied. Only the sequence number is 
+    disassembled. 
+
