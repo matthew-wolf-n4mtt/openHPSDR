@@ -1,0 +1,36 @@
+5-JAN-2017 Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
+
+Version 0.0.1:
+  * Initial Beta Version
+  - Wireshark version 2.0.1 
+  - There is disassembly of Erase Reply. Erase Reply is Command Reply command 
+    0x03 from the Hardware.
+  - The rest of the Command Reply protocol (port 1024) is disassembled
+  - The other protocols are not full disassembled.
+  - The other protocols are identfied. Only the sequence number is 
+    disassembled. 
+
+Version 0.0.2:
+  - Corrected byte 12 of the Discovery Reply.
+  - Added Erase Acknowledgment and Erase Complete.
+  - All port 1024 communications should now be disassembled.
+  - Added DDC Command: dest port 1025 from Host to Hardware.
+  - Added High Priority Status: source port 1025 from Hardware to Host.
+  - All port port 1025 communications should now be disassembled.
+
+Version 0.0.3:
+  - The first attempt of the basic disassembled of every thing but board 
+    type 255 is completed. Board type 255 is the full hardware description in
+    the discovery response. 
+  - I may have reversed the order of the Alex 0 bits. 
+
+Version 0.0.4:
+  - Wireshark version 2.2.3
+  - Added disassembly of the full hardware description, board type 255.
+  - Added the "Hardware Time Enable" to the Command Reply (CR) General Datagram.
+  - Added endianness options.
+  - Added I&Q data format options.
+  - Cleaned up formating in attempt to improve understandability.
+  - The Plug-in should disassemble every thing that is included in the 
+    2.9 Protocol Document.  
+
