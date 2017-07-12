@@ -19,7 +19,7 @@ Version 0.0.6:
   - Removed "Program Check Roll Over" test. The last program block from the host
     is padded. The packet length test will discover what the removed test was
     trying to discover.
-  -Added Orion MkII (ANAN-8000DLE) details.
+  - Added Orion MkII (ANAN-8000DLE) details.
     Command Reply (CR):
       - Added to Discovery reply
     High Priority Status (HP):
