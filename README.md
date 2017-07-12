@@ -25,10 +25,10 @@ Version 0.0.6:
     High Priority Status (HP):
       - Change label for bits 0 to 4 of byte 59.
     High Priority Command (HPC):
-       -Added text string listing Alex0 register map bits not used by
-        Orion MkII (ANAN-8000DLE).
-       -Added Alex0 TX RX Orion MkII (ANAN-8000DLE) status bit.
-       -Added bit 1400: Transverter Enable, IO1 Audio state.
+       - Added text string listing Alex0 register map bits not used by
+         Orion MkII (ANAN-8000DLE).
+       - Added Alex0 TX RX Orion MkII (ANAN-8000DLE) status bit.
+       - Added bit 1400: Transverter Enable, IO1 Audio state.
 
 -------------------------------------------------------------------------------
 
