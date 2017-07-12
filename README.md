@@ -20,11 +20,11 @@ Version 0.0.6:
     is padded. The packet length test will discover what the removed test was
     trying to discover.
   - Added Orion MkII (ANAN-8000DLE) details.
-    Command Reply (CR):
+    - Command Reply (CR):
       - Added to Discovery reply
-    High Priority Status (HP):
+    - High Priority Status (HP):
       - Change label for bits 0 to 4 of byte 59.
-    High Priority Command (HPC):
+    - High Priority Command (HPC):
        - Added text string listing Alex0 register map bits not used by
          Orion MkII (ANAN-8000DLE).
        - Added Alex0 TX RX Orion MkII (ANAN-8000DLE) status bit.
