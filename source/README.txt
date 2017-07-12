@@ -1,4 +1,4 @@
-09-JULY-2017 Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
+09-JULY-2017 Matthew J. Wolf Email: matthew.wolf.hpsdr at speciosus.net
 
 The openHPSDR Plug-in for Wireshark is written to disassemble the openHPSDR
 Ethernet protocol.
