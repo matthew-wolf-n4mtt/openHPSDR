@@ -62,24 +62,24 @@ are names that I created.
 
  Host and Hardware Use the Same Port
  -----------------------------------
- Port   Name
- 1024   Command Reply (CR)
- xxxx   Memory Mapped (MEM)
+- Port   Name
+- 1024   Command Reply (CR)
+- xxxx   Memory Mapped (MEM)
 
  Host to Hardware - destination UDP port
  ---------------------------------------
- 1025 	DDC Command (DDCC)
- 1026 	DUC Command (DUCC)
- 1027 	High Priority Command (HPC)
- 1028 	DDC Audio (DDCA)
- 1029 to 1036	DUC I&Q Data (DUCIQ)
+- 1025 	DDC Command (DDCC)
+- 1026 	DUC Command (DUCC)
+- 1027 	High Priority Command (HPC)
+- 1028 	DDC Audio (DDCA)
+- 1029 to 1036	DUC I&Q Data (DUCIQ)
 
  Hardware to Host -source UDP port
  ---------------------------------
- 1025		High Priority Status (HPS)
- 1026		Mic / Line Samples (MICL)
- 1027 to 1034	Wide Band Data (WBD)
- 1035 to 1114	DDC I&Q Data (DDCIQ)
+- 1025		High Priority Status (HPS)
+- 1026		Mic / Line Samples (MICL)
+- 1027 to 1034	Wide Band Data (WBD)
+- 1035 to 1114	DDC I&Q Data (DDCIQ)
 
 
 
