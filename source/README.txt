@@ -19,16 +19,16 @@ Version 0.0.6:
   - Removed "Program Check Roll Over" test. The last program block from the host
     is padded. The packet length test will discover what the removed test was
     trying to discover.
-  -Added Orion MkII (ANAN-8000DLE) details.
-    Command Reply (CR):
+  - Added Orion MkII (ANAN-8000DLE) details.
+    - Command Reply (CR):
       - Added to Discovery reply
-    High Priority Status (HP):
+    - High Priority Status (HP):
       - Change label for bits 0 to 4 of byte 59.
-    High Priority Command (HPC):
-       -Added text string listing Alex0 register map bits not used by
-        Orion MkII (ANAN-8000DLE).
-       -Added Alex0 TX RX Orion MkII (ANAN-8000DLE) status bit.
-       -Added bit 1400: Transverter Enable, IO1 Audio state.
+    - High Priority Command (HPC):
+       - Added text string listing Alex0 register map bits not used by
+         Orion MkII (ANAN-8000DLE).
+       - Added Alex0 TX RX Orion MkII (ANAN-8000DLE) status bit.
+       - Added bit 1400: Transverter Enable, IO1 Audio state.
 
 -------------------------------------------------------------------------------
 
@@ -38,8 +38,8 @@ General Notes
 I have done basic testing of the plug-in with the Hermes firmware version 10.3.
 
 I have done basic testing with:
-Thetis (v2.5.2 7/9/17 beta)
-Web Server version of HPSDR Programmer Version 0.2.8
+- Thetis (v2.5.2 7/9/17 beta)
+- Web Server version of HPSDR Programmer Version 0.2.8
 
 Non-default Ports
 -----------------
@@ -89,11 +89,11 @@ There are three configurable preferences in the WireShark dissector.
 
 They are all boolean (on or off) preferences.
 
--"Strict Checking of Datagram Size"
+- "Strict Checking of Datagram Size"
   Disable checking for added bytes at the end of the datagrams.
   Turning off disables a warning meassge.
 
--"Strict Pad Checking"
+- "Strict Pad Checking"
   Strict checking of the amount of pad bytes at the end of the datagrams.
   When enabled, Wireshark (not the openHPSDR dissector) will display
   a "Malformed Packet" error for a datagram without the correct
@@ -101,7 +101,7 @@ They are all boolean (on or off) preferences.
   When disabled, checking is only for one pad byte instead of checking
   for the correct number of pad bytes.
 
--"ddciq_iq_mtu_check"
+- "ddciq_iq_mtu_check"
  Check to see if the number of I&Q Samples
  will exceed the maximum Ethernet MTU (1500 bytes).
  When disabled, there will be no checking
@@ -122,12 +122,12 @@ Here is an example display filter for finding a Mic / Line Samples (MICL)
 datagrams.
 
 openhpsdr-e.micl.sample-idx==718 && openhpsdr-e.micl.sample == 0x1111
--Find all the MICL datagrams in which sample number 718 has a value of 0x1111.
+- Find all the MICL datagrams in which sample number 718 has a value of 0x1111.
 
 Here is an example display filter for finding Wide Band (WBD) datagrams.
 
 openhpsdr-e.wbd.adc == 4 && openhpsdr-e.wbd.sample-idx == 2 && openhpsdr-e.wbd.sample == 0x66ee
--Find all WDB datagrams from ADC number 4 in which sample number 2 has the value
+- Find all WDB datagrams from ADC number 4 in which sample number 2 has the value
 of 0x66ee.
 
 The easiest way to find a field name is to click on a item in Wireshark. The
