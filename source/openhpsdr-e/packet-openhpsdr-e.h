@@ -1,32 +1,35 @@
-/* packet-openhpsdr.h  
+/* packet-openhpsdr-e.h
  * Header file for the OpenHPSDR Ethernet protocol packet disassembly
+ *
+ * Version: 0.0.7
+ * Author:  Matthew J Wolf, N4MTT
+ * Date:    03-MAY-2019
  *
  * This file is part of the OpenHPSDR Plug-in for Wireshark.
  * By Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
- * Copyright 2016 Matthew J. Wolf
- * Copyright 2017 Matthew J. Wolf
+ * Copyright 2019 Matthew J. Wolf
  *
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * The HPSDR-USB Plug-in for Wireshark is free software: you can 
- * redistribute it and/or modify it under the terms of the GNU 
+ * The OpenHPSDR-Ethernet Plug-in for Wireshark is free software: you can
+ * redistribute it and/or modify it under the terms of the GNU
  * General Public License as published by the Free Software Foundation,
  * either version 2 of the License, or (at your option) any later version.
- * 
- * The HPSDR-USB Plug-in for Wireshark is distributed in the hope that
- * it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See 
+ *
+ * The OpenHPSDR-Ethernet Plug-in for Wireshark is distributed in the hope that
+ * it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with the HPSDR-USB Plug-in for Wireshark.  
+ * along with the OpenHPSDR-Ethernet Plug-in for Wireshark.
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-// UDP PORTS 
-#define HPSDR_E_PORT_COM_REP 1024 // COMMAND REPLY PROTOCOL 
+// UDP PORTS
+#define HPSDR_E_PORT_COM_REP 1024 // COMMAND REPLY PROTOCOL
 #define HPSDR_E_PORT_DDC_COM 1025 // DCC COMMAND PROTOCOL    -DEST   PORT (SOURCE HOST)
 #define HPSDR_E_PORT_HP_STAT 1025 // HIGH PRIORITY STATUS    -SOURCE PORT (SOURCE HARDWARE)
 #define HPSDR_E_PORT_DUC_COM 1026 // DUC COMMAND PROTOCOL    -DEST   PORT (SOURCE HOST)
@@ -41,6 +44,7 @@
 #define ZERO_MASK      0x00
 #define BOOLEAN_MASK   0x08   // ???? CORRECT ????
 #define BIT8_MASK      0xFF
+#define BIT7_MASK      0x7F //0b01111111
 #define BIT16_MASK     0xFFFF
 #define MASKBITS_1_0   0x03 //0b00000011
 #define MASKBITS_2_1_0 0x07 //0b00000111
@@ -63,10 +67,10 @@
 
 gint cr_packet_end_pad(tvbuff_t *tvb, proto_tree *tree, gint offset, gint size);
 guint8 gc_discovery_reply(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset);
-void cr_check_length(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset);
+void openhpsdr_e_check_frame_length(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset);
 void proto_register_hpsdr_u(void);
 static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree);
-static gboolean dissect_openhpsdr_e_cr_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, 
+static gboolean dissect_openhpsdr_e_cr_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     void *data);
 static void dissect_openhpsdr_e_ddcc(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree);
 static gboolean dissect_openhpsdr_e_ddcc_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
@@ -93,5 +97,3 @@ static void dissect_openhpsdr_e_mem(tvbuff_t *tvb, packet_info *pinfo, proto_tre
 static gboolean dissect_openhpsdr_e_mem_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     void *data);
 void proto_reg_handoff_openhpsdr_e(void);
-
-

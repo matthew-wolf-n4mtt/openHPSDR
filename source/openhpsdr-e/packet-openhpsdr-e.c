@@ -1,34 +1,35 @@
-/* packet-openhpsdr.c
+/* packet-openhpsdr-e.c
  * Routines for the OpenHPSDR Ethernet protocol packet disassembly
  *
- * Version: 0.0.6
+ * Version: 0.0.7
  * Author:  Matthew J Wolf, N4MTT
- * Date:    09-JULY-2017
+ * Date:    03-MAY-2019
  *
- * This file is part of the OpenHPSDR Plug-in for Wireshark.
+ * This file is part of the OpenHPSDR-Ethernet (Protocol 2) Plug-in
+ * for Wireshark.
  * By Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
- * Copyright 2017 Matthew J. Wolf
+ * Copyright 2019 Matthew J. Wolf
  *
  * Wireshark - Network traffic analyzer
  * By Gerald Combs <gerald@wireshark.org>
  * Copyright 1998 Gerald Combs
  *
- * The HPSDR-USB Plug-in for Wireshark is free software: you can
+ * The OpenHPSDR-Ethernet Plug-in for Wireshark is free software: you can
  * redistribute it and/or modify it under the terms of the GNU
  * General Public License as published by the Free Software Foundation,
  * either version 2 of the License, or (at your option) any later version.
  *
- * The HPSDR-USB Plug-in for Wireshark is distributed in the hope that
+ * The OpenHPSDR Ethernet Plug-in for Wireshark is distributed in the hope that
  * it will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with the HPSDR-USB Plug-in for Wireshark.
+ * along with the OpenHPSDR-Ethernet Plug-in for Wireshark.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * The HPSDR-USB Plug-in for Wireshark is written to disassemble the protocol
+ * The OpenHPSDR Ethernet Plug-in for Wireshark is written to disassemble the protocol
  * that is defined in the documents listed below.
  *
  * The protocol is still under development.
@@ -53,7 +54,6 @@
 // ddciq - DDC I&Q Data (Hardware to Host - base source port 1035)
 // mem   - Memory Mapped (No default port)
 
-#include "config.h"
 #include <epan/packet.h>
 #include <epan/expert.h>
 #include <epan/prefs.h>
@@ -61,7 +61,7 @@
 #include <stdlib.h>
 //#include <string.h>
 //#include <math.h>
-#include "packet-openhpsdr.h"
+#include "packet-openhpsdr-e.h"
 
 
 //Port definitions in packet-openhpsdr.h header
@@ -107,11 +107,11 @@ static gint ett_openhpsdr_e_ddcc_ditram = -1;
 static gint ett_openhpsdr_e_ddcc_state = -1;
 static gint ett_openhpsdr_e_ddcc_config = -1;
 static gint ett_openhpsdr_e_ddcc_sync = -1;
-static gint ett_openhpsdr_e_ddcc_mux = -1;
 static gint ett_openhpsdr_e_hps = -1;
 static gint ett_openhpsdr_e_ducc = -1;
 static gint ett_openhpsdr_e_micl = -1;
 static gint ett_openhpsdr_e_hpc = -1;
+static gint ett_openhpsdr_e_hpc_cwx0 = -1;
 static gint ett_openhpsdr_e_hpc_ddc_fp = -1;
 static gint ett_openhpsdr_e_hpc_alex0 = -1;
 static gint ett_openhpsdr_e_wbd = -1;
@@ -160,6 +160,7 @@ static int hf_openhpsdr_e_cr_disc_little_endian = -1;
 static int hf_openhpsdr_e_cr_disc_three_byte_ddciq = -1;
 static int hf_openhpsdr_e_cr_disc_float_ddciq = -1;
 static int hf_openhpsdr_e_cr_disc_double_ddciq = -1;
+static int hf_openhpsdr_e_cr_disc_beta_ver = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_hpsdr_fw = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_udp_ports = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_fixed_ip = -1;
@@ -187,7 +188,6 @@ static int hf_openhpsdr_e_cr_disc_full_hw_ddc_rate_min = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_ddc_rate_max = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_cic_dec = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_sync_ddc_num = -1;
-static int hf_openhpsdr_e_cr_disc_full_hw_multi_ddc_num = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_ddc_codec_channels = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_ddc_codec_rate = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_ddc_codec_size = -1;
@@ -216,6 +216,13 @@ static int hf_openhpsdr_e_cr_disc_full_hw_duc_atten = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_oc = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_ddc_cal = -1;
 static int hf_openhpsdr_e_cr_disc_full_hw_gen_adc = -1;
+static int hf_openhpsdr_e_cr_erase_mac = -1;
+static int hf_openhpsdr_e_cr_erase_board = -1;
+static int hf_openhpsdr_e_cr_erase_proto_ver = -1;
+static int hf_openhpsdr_e_cr_prog_mac = -1;
+static int hf_openhpsdr_e_cr_prog_fw_ver = -1;
+static int hf_openhpsdr_e_cr_prog_board = -1;
+static int hf_openhpsdr_e_cr_prog_fw_cksum = -1;
 static int hf_openhpsdr_e_cr_prog_blocks = -1;
 static int hf_openhpsdr_e_cr_prog_data = -1;
 static int hf_openhpsdr_e_cr_setip_sub = -1;
@@ -1414,15 +1421,6 @@ static int hf_openhpsdr_e_ddcc_ddc_sync7_76 = -1;
 static int hf_openhpsdr_e_ddcc_ddc_sync7_77 = -1;
 static int hf_openhpsdr_e_ddcc_ddc_sync7_78 = -1;
 static int hf_openhpsdr_e_ddcc_ddc_sync7_79 = -1;
-static int hf_openhpsdr_e_ddcc_mux_sub = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux0 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux1 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux2 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux3 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux4 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux5 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux6 = -1;
-static int hf_openhpsdr_e_ddcc_ddc_mux7 = -1;
 
 static int hf_openhpsdr_e_hps_banner = -1;
 static int hf_openhpsdr_e_hps_sequence_num = -1;
@@ -1431,7 +1429,11 @@ static int hf_openhpsdr_e_hps_dot = -1;
 static int hf_openhpsdr_e_hps_dash = -1;
 static int hf_openhpsdr_e_hps_empty = -1;
 static int hf_openhpsdr_e_hps_pll = -1;
+// Remove at some point ?
+// 3.7 - No longer supported
 static int hf_openhpsdr_e_hps_fifo_empty = -1;
+// Remove at some point ?
+// 3.7 - No longer supported
 static int hf_openhpsdr_e_hps_fifo_full = -1;
 static int hf_openhpsdr_e_hps_adc0_ol = -1;
 static int hf_openhpsdr_e_hps_adc1_ol = -1;
@@ -1508,9 +1510,10 @@ static int hf_openhpsdr_e_hpc_ptt0 = -1;
 static int hf_openhpsdr_e_hpc_ptt1 = -1;
 static int hf_openhpsdr_e_hpc_ptt2 = -1;
 static int hf_openhpsdr_e_hpc_ptt3 = -1;
-static int hf_openhpsdr_e_hpc_cwx0 = -1;
-static int hf_openhpsdr_e_hpc_dot = -1;
-static int hf_openhpsdr_e_hpc_dash = -1;
+static int hf_openhpsdr_e_hpc_cwx0_sub =-1;
+static int hf_openhpsdr_e_hpc_cwx0_cwx = -1;
+static int hf_openhpsdr_e_hpc_cwx0_dot = -1;
+static int hf_openhpsdr_e_hpc_cwx0_dash = -1;
 static int hf_openhpsdr_e_hpc_cwx1 = -1;
 static int hf_openhpsdr_e_hpc_cwx2 = -1;
 static int hf_openhpsdr_e_hpc_cwx3 = -1;
@@ -1605,7 +1608,6 @@ static int hf_openhpsdr_e_hpc_drive_duc2 = -1;
 static int hf_openhpsdr_e_hpc_drive_duc3 = -1;
 static int hf_openhpsdr_e_hpc_orion2_xvtr = -1;
 static int hf_openhpsdr_e_hpc_orion2_IO1 = -1;
-static int hf_openhpsdr_e_hpc_open_col0 = -1;
 static int hf_openhpsdr_e_hpc_open_col1 = -1;
 static int hf_openhpsdr_e_hpc_open_col2 = -1;
 static int hf_openhpsdr_e_hpc_open_col3 = -1;
@@ -1746,7 +1748,7 @@ static const value_string cr_disc_board_id[] = {
     { 0x03, "\"Angela\" (ANAN-100D)" },
     { 0x04, "\"Orion\" (ANAN-200D)" },
     { 0x05, "\"Orion Mk II\" (ANAN-8000DLE)" },
-    { 0x06, "Hermes Lite" },
+    { 0x06, "Hermes-Lite" },
     { 0x07, "Reserved" },
     { 0x08, "Reserved" },
     { 0x09, "Reserved" },
@@ -1852,11 +1854,11 @@ void proto_register_openhpsdr_e(void)
         &ett_openhpsdr_e_ddcc_state,
         &ett_openhpsdr_e_ddcc_config,
         &ett_openhpsdr_e_ddcc_sync,
-        &ett_openhpsdr_e_ddcc_mux,
         &ett_openhpsdr_e_hps,
         &ett_openhpsdr_e_ducc,
         &ett_openhpsdr_e_micl,
         &ett_openhpsdr_e_hpc,
+        &ett_openhpsdr_e_hpc_cwx0,
         &ett_openhpsdr_e_hpc_ddc_fp,
         &ett_openhpsdr_e_hpc_alex0,
         &ett_openhpsdr_e_wbd,
@@ -2030,6 +2032,12 @@ void proto_register_openhpsdr_e(void)
 	    TFS(&local_supported_notsupported), BOOLEAN_B4,
             NULL, HFILL }
        },
+       { &hf_openhpsdr_e_cr_disc_beta_ver,
+           { "Beta Version", "openhpsdr-e.cr.discovery.beta-ver",
+            FT_UINT8, BASE_DEC,
+            NULL, ZERO_MASK,
+            NULL, HFILL }
+       },
        { &hf_openhpsdr_e_cr_disc_full_hw_hpsdr_fw,
            { "OpenHPSDR Firmware Update", "openhpsdr-e.cr.discovery.full-hw.fw",
             FT_BOOLEAN, BOOLEAN_MASK,
@@ -2188,12 +2196,6 @@ void proto_register_openhpsdr_e(void)
        },
        { &hf_openhpsdr_e_cr_disc_full_hw_sync_ddc_num,
            { "Number Synchronous DDC       ", "openhpsdr-e.cr.discovery.full-hw.sync-ddc-num",
-            FT_UINT8, BASE_DEC,
-            NULL, ZERO_MASK,
-            NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_cr_disc_full_hw_multi_ddc_num,
-           { "Number Multiplexed DDC       ", "openhpsdr-e.cr.discovery.full-hw.multi-ddc-num",
             FT_UINT8, BASE_DEC,
             NULL, ZERO_MASK,
             NULL, HFILL }
@@ -2366,6 +2368,48 @@ void proto_register_openhpsdr_e(void)
             NULL, ZERO_MASK,
             NULL, HFILL }
        },
+       { &hf_openhpsdr_e_cr_erase_mac,
+           { "Board MAC Address" , "openhpsdr-e.cr.erase.mac",
+            FT_ETHER, BASE_NONE,
+            NULL, ZERO_MASK,
+            "Hardware Address", HFILL }
+       },
+       { &hf_openhpsdr_e_cr_erase_board,
+           { "Board Type       ", "openhpsdr-e.cr.erase.board",
+            FT_UINT8, BASE_DEC,
+            VALS(cr_disc_board_id), ZERO_MASK,
+            NULL, HFILL }
+       },
+       { &hf_openhpsdr_e_cr_erase_proto_ver,
+           { "Potocol Version  ", "openhpsdr-e.cr.erase.proto-ver",
+            FT_UINT8, BASE_DEC,
+            NULL, ZERO_MASK,
+            NULL, HFILL }
+       },
+       { &hf_openhpsdr_e_cr_prog_mac,
+           { "Board MAC Address    " , "openhpsdr-e.cr.program.mac",
+            FT_ETHER, BASE_NONE,
+            NULL, ZERO_MASK,
+            "Hardware Address", HFILL }
+       },
+       { &hf_openhpsdr_e_cr_prog_fw_ver,
+           { "Firmware Code Version", "openhpsdr-e.cr.program.fw-ver",
+            FT_UINT8, BASE_DEC,
+            NULL, ZERO_MASK,
+            NULL, HFILL }
+       },
+       { &hf_openhpsdr_e_cr_prog_board,
+           { "Board Type           ", "openhpsdr-e.cr.program.board",
+            FT_UINT8, BASE_DEC,
+            VALS(cr_disc_board_id), ZERO_MASK,
+            NULL, HFILL }
+       },
+       { &hf_openhpsdr_e_cr_prog_fw_cksum,
+           { "Firmware Checksum    ", "openhpsdr-e.cr.program.fw-cksum",
+            FT_UINT16, BASE_DEC,
+            NULL, ZERO_MASK,
+            NULL, HFILL }
+       },
        { &hf_openhpsdr_e_cr_prog_blocks,
            { "Program Blocks", "openhpsdr-e.cr.program.blocks",
             FT_UINT32, BASE_DEC,
@@ -2373,7 +2417,7 @@ void proto_register_openhpsdr_e(void)
             NULL, HFILL }
        },
        { &hf_openhpsdr_e_cr_prog_data,
-           { "Program Blocks", "openhpsdr-e.cr.program.data",
+           { "Program Data  ", "openhpsdr-e.cr.program.data",
             FT_NONE, BASE_NONE,
             NULL, ZERO_MASK,
             NULL, HFILL }
@@ -9553,60 +9597,6 @@ void proto_register_openhpsdr_e(void)
              TFS(&local_on_off),BOOLEAN_B7,
              NULL, HFILL }
        },
-       { &hf_openhpsdr_e_ddcc_mux_sub,
-           { "DDC Multiplex Submenu" , "openhpsdr-e.ddcc.mux-sub",
-            FT_UINT8, BASE_HEX,
-            NULL, ZERO_MASK,
-            NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux0,
-           { "DDC 0 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux0",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B0,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux1,
-           { "DDC 1 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux1",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B1,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux2,
-           { "DDC 2 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux2",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B2,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux3,
-           { "DDC 3 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux3",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B3,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux4,
-           { "DDC 4 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux4",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B4,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux5,
-           { "DDC 5 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux5",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B5,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux6,
-           { "DDC 6 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux6",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B6,
-             NULL, HFILL }
-       },
-       { &hf_openhpsdr_e_ddcc_ddc_mux7,
-           { "DDC 7 Multiplexed", "openhpsdr-e.cr.ddcc.ddc-mux7",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_on_off),BOOLEAN_B7,
-             NULL, HFILL }
-       },
    };
 
     // High Priority Status Field Arrary
@@ -9653,12 +9643,16 @@ void proto_register_openhpsdr_e(void)
              TFS(&lock_unlock), BOOLEAN_B4,
              NULL, HFILL }
        },
+       // Remove at some point ?
+       // 3.7 - No longer supported
        { &hf_openhpsdr_e_hps_fifo_empty,
            { "FIFO Empty", "openhpsdr-e.hps.fifo-empty",
              FT_BOOLEAN, BOOLEAN_MASK,
              TFS(&local_set_notset), BOOLEAN_B5,
              NULL, HFILL }
        },
+       // Remove at some point ?
+       // 3.7 - No longer supported
        { &hf_openhpsdr_e_hps_fifo_full,
            { "FIFO  Full", "openhpsdr-e.hps.fifo-full",
              FT_BOOLEAN, BOOLEAN_MASK,
@@ -10110,20 +10104,26 @@ void proto_register_openhpsdr_e(void)
              TFS(&local_active_inactive), BOOLEAN_B4,
              NULL, HFILL }
        },
-       { &hf_openhpsdr_e_hpc_cwx0,
-           { "CW Mode", "openhpsdr-e.hpc.cwx0",
+       { &hf_openhpsdr_e_hpc_cwx0_sub,
+           { "CWX0 Submenu" , "openhpsdr-e.hpc.cwx0-sub",
+            FT_UINT8, BASE_HEX,
+            NULL, ZERO_MASK,
+            NULL, HFILL }
+       },
+       { &hf_openhpsdr_e_hpc_cwx0_cwx,
+           { "CWX ", "openhpsdr-e.hpc.cwx0-cwx",
              FT_BOOLEAN, BOOLEAN_MASK,
              TFS(&host_hardware), BOOLEAN_B0,
              NULL, HFILL }
        },
-       { &hf_openhpsdr_e_hpc_dot,
-           { "CW Dot ", "openhpsdr-e.hpc.cw-dot",
+       { &hf_openhpsdr_e_hpc_cwx0_dot,
+           { "Dot ", "openhpsdr-e.hpc.cwx0-dot",
              FT_BOOLEAN, BOOLEAN_MASK,
              TFS(&local_active_inactive), BOOLEAN_B1,
              NULL, HFILL }
        },
-       { &hf_openhpsdr_e_hpc_dash,
-           { "CW Dash", "openhpsdr-e.hpc.cw-dash",
+       { &hf_openhpsdr_e_hpc_cwx0_dash,
+           { "Dash", "openhpsdr-e.hpc.cwx0-dash",
              FT_BOOLEAN, BOOLEAN_MASK,
              TFS(&local_active_inactive), BOOLEAN_B2,
              NULL, HFILL }
@@ -10146,9 +10146,8 @@ void proto_register_openhpsdr_e(void)
             NULL, ZERO_MASK,
             NULL, HFILL }
        },
-
        { &hf_openhpsdr_e_hpc_ddc_fp_sub,
-           { "DDC  Frequency / Phase Word Submenu" , "openhpsdr-e.ddcc.sync-sub",
+           { "DDC  Frequency / Phase Word Submenu" , "openhpsdr-e.hpc.sync-sub",
             FT_UINT8, BASE_HEX,
             NULL, ZERO_MASK,
             NULL, HFILL }
@@ -10693,52 +10692,46 @@ void proto_register_openhpsdr_e(void)
             TFS(&orion2_IO1), BOOLEAN_B1,
             NULL, HFILL }
        },
-       { &hf_openhpsdr_e_hpc_open_col0,
-           { "Open Collector Out 0", "openhpsdr-e.hpc.open-col0",
-             FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B0,
-             NULL, HFILL }
-       },
        { &hf_openhpsdr_e_hpc_open_col1,
            { "Open Collector Out 1", "openhpsdr-e.hpc.open-col1",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B1,
+             TFS(&local_enabled_disabled), BOOLEAN_B0,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_open_col2,
            { "Open Collector Out 2", "openhpsdr-e.hpc.open-col2",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B2,
+             TFS(&local_enabled_disabled), BOOLEAN_B1,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_open_col3,
            { "Open Collector Out 3", "openhpsdr-e.hpc.open-col3",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B3,
+             TFS(&local_enabled_disabled), BOOLEAN_B2,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_open_col4,
            { "Open Collector Out 4", "openhpsdr-e.hpc.open-col4",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B4,
+             TFS(&local_enabled_disabled), BOOLEAN_B3,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_open_col5,
            { "Open Collector Out 5", "openhpsdr-e.hpc.open-col5",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B5,
+             TFS(&local_enabled_disabled), BOOLEAN_B4,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_open_col6,
            { "Open Collector Out 6", "openhpsdr-e.hpc.open-col6",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B6,
+             TFS(&local_enabled_disabled), BOOLEAN_B5,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_open_col7,
            { "Open Collector Out 7", "openhpsdr-e.hpc.open-col7",
              FT_BOOLEAN, BOOLEAN_MASK,
-             TFS(&local_enabled_disabled), BOOLEAN_B7,
+             TFS(&local_enabled_disabled), BOOLEAN_B6,
              NULL, HFILL }
        },
        { &hf_openhpsdr_e_hpc_db9_out1,
@@ -11346,9 +11339,9 @@ void proto_register_openhpsdr_e(void)
    };
 
    proto_openhpsdr_e = proto_register_protocol (
-       "openHPSDR Ethernet",  // name
-       "openHPSDR",          // short name
-       "hpsdr-e"            // abbrev
+       "OpenHPSDR Ethernet - Protocol 2", // name
+       "HPSDR-ETH_P2",                    // short name
+       "hpsdr-e"                          // abbrev
    );
 
    // Register the arrays
@@ -11430,10 +11423,11 @@ guint8 cr_discovery_reply(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, g
 
    proto_item *append_text_item_disc = NULL;
 
-   const guint8 *discovery_ether_mac;
-   discovery_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
+//   const guint8 *discovery_ether_mac;
+   const guint8 *cr_ether_mac;
+   cr_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
 
-   proto_tree_add_ether(tree, hf_openhpsdr_e_cr_disc_mac, tvb,offset, 6, discovery_ether_mac);
+   proto_tree_add_ether(tree, hf_openhpsdr_e_cr_disc_mac, tvb,offset, 6, cr_ether_mac);
    offset += 6;
 
    board_id = tvb_get_guint8(tvb, offset);
@@ -11601,7 +11595,9 @@ guint8 cr_discovery_reply(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, g
       proto_tree_add_item(tree, hf_openhpsdr_e_cr_disc_full_hw_sync_ddc_num, tvb,offset, 1, ENC_BIG_ENDIAN);
       offset += 1;
 
-      proto_tree_add_item(tree, hf_openhpsdr_e_cr_disc_full_hw_multi_ddc_num, tvb,offset, 1, ENC_BIG_ENDIAN);
+      // 3.7 Change: Per 3.7 - DDC Multiplex Removed.
+      proto_tree_add_string_format(tree,hf_openhpsdr_e_reserved,tvb,offset,1,placehold,
+           "Number Multiplexed DDC       : Per 3.7 - DDC Multiplex Removed.");
       offset += 1;
 
       proto_tree_add_item(tree, hf_openhpsdr_e_cr_disc_full_hw_ddc_codec_channels, tvb,offset, 1, ENC_BIG_ENDIAN);
@@ -11720,7 +11716,7 @@ guint8 cr_discovery_reply(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, g
       proto_tree_add_item(tree, hf_openhpsdr_e_cr_disc_full_hw_gen_adc, tvb,offset, 1, ENC_BIG_ENDIAN);
       offset += 1;
 
-      cr_check_length(tvb,pinfo,tree,offset);
+      openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    // "Standard" Boards
    } else {
@@ -11770,14 +11766,17 @@ guint8 cr_discovery_reply(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, g
       proto_tree_add_boolean(tree, hf_openhpsdr_e_cr_disc_double_ddciq, tvb,offset, 1, boolean_byte);
       offset += 1;
 
-      offset = cr_packet_end_pad(tvb,tree,offset,37);
-      cr_check_length(tvb,pinfo,tree,offset);
+      proto_tree_add_item(tree, hf_openhpsdr_e_cr_disc_beta_ver, tvb,offset, 1, ENC_BIG_ENDIAN);
+      offset += 1;
+
+      offset = cr_packet_end_pad(tvb,tree,offset,36);
+      openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
    }
 
    return board_id;
 }
 
-void cr_check_length(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset)
+void openhpsdr_e_check_frame_length(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint offset)
 {
 
    guint length_remaining = -1;
@@ -11810,9 +11809,9 @@ void cr_check_length(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, gint o
 // Hardware to Host
 // From Port     Command     Name
 // 1024          0x02        Discovery Reply Packet
-// 1024          0x03        Discovery Reply Packet (In Use) ????
+// 1024          0x03        ??? Discovery Reply Packet (In Use) ????
 // 1024          0x03        Erase Ack / Erase Complete
-// 1024          0x04        Program Data Request
+// 1024          0x04        Program Data Response
 static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
    gint offset = 0;
@@ -11828,8 +11827,8 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
 
    const char *placehold = NULL ;
 
-   const guint8 *discovery_ether_mac;
-   discovery_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
+   const guint8 *cr_ether_mac;
+   cr_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
 
    col_set_str(pinfo->cinfo, COL_PROTOCOL, "openHPSDR CR");
    // Clear out the info column
@@ -12019,7 +12018,7 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                proto_tree_add_boolean(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_gen_alex_7, tvb,offset, 1, boolean_byte);
                offset += 1;
 
-               cr_check_length(tvb,pinfo,tree,offset);
+               openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
            }
 
@@ -12030,7 +12029,7 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                proto_item_append_text(append_text_item," :Discovery - Host Discovery Query");
 
                offset = cr_packet_end_pad(tvb,openhpsdr_e_cr_tree,offset,55);
-               cr_check_length(tvb,pinfo,tree,offset);
+               openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
            } else if (pinfo->srcport == HPSDR_E_PORT_COM_REP) {
 
@@ -12045,13 +12044,13 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
            if (pinfo->destport == HPSDR_E_PORT_COM_REP) {
                proto_item_append_text(append_text_item," :Set IP Address - Host Set IP Address");
 
-               proto_tree_add_ether(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_setip_mac, tvb,offset, 6, discovery_ether_mac);
+               proto_tree_add_ether(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_setip_mac, tvb,offset, 6, cr_ether_mac);
                offset += 6;
                proto_tree_add_ipv4(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_setip_ip, tvb,offset, 4,tvb_get_ipv4(tvb,offset));
                offset += 4;
 
                offset = cr_packet_end_pad(tvb,openhpsdr_e_cr_tree,offset,45);
-               cr_check_length(tvb,pinfo,tree,offset);
+               openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
            } else if (pinfo->srcport == HPSDR_E_PORT_COM_REP) {
 
@@ -12065,22 +12064,22 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                if (  tvb_get_guint32(tvb,offset-5,6) == 0 && tvb_get_guint64(tvb,offset+10,8) == 0 ) {
                   proto_item_append_text(append_text_item," :Erase - Acknowledgment or Complete");
 
-                  discovery_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
+                  cr_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
 
 
-                  proto_tree_add_ether(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_disc_mac, tvb,offset, 6, discovery_ether_mac);
+                  proto_tree_add_ether(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_erase_mac, tvb,offset, 6, cr_ether_mac);
                   offset += 6;
 
-                  proto_tree_add_item(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_disc_board,tvb,offset,1,ENC_BIG_ENDIAN);
+                  proto_tree_add_item(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_erase_board,tvb,offset,1,ENC_BIG_ENDIAN);
                   offset += 1;
 
                   value = tvb_get_guint8(tvb, offset);
-                  proto_tree_add_uint_format(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_disc_proto_ver,tvb,offset,1,value,
+                  proto_tree_add_uint_format(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_erase_proto_ver,tvb,offset,1,value,
                       "openHPSDR Protocol: %d.%.1d",(value/10),(value%10));
                   offset += 1;
 
                   offset = cr_packet_end_pad(tvb,openhpsdr_e_cr_tree,offset,47);
-                  cr_check_length(tvb,pinfo,tree,offset);
+                  openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
                } else {
                    proto_item_append_text(append_text_item," :Discovery - Hardware Discovery Reply (Hardware In Use)");
@@ -12094,26 +12093,27 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                proto_item_append_text(append_text_item," :Erase - Host Erase Command");
 
                offset = cr_packet_end_pad(tvb,openhpsdr_e_cr_tree,offset,55);
-               cr_check_length(tvb,pinfo,tree,offset);
+               openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
            } else if (pinfo->srcport == HPSDR_E_PORT_COM_REP) {
-               proto_item_append_text(append_text_item," :Program - Hardware: Reply - Acknowledgment");
+               proto_item_append_text(append_text_item," :Program - Hardware: Response to Program");
 
-               discovery_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
+               cr_ether_mac = tvb_get_ptr(tvb, 5, 6); // Has to be defined before using.
 
-               proto_tree_add_ether(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_disc_mac, tvb,offset, 6, discovery_ether_mac);
+               proto_tree_add_ether(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_prog_mac, tvb,offset, 6, cr_ether_mac);
                offset += 6;
 
-               proto_tree_add_item(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_disc_board,tvb,offset,1,ENC_BIG_ENDIAN);
+               proto_tree_add_item(openhpsdr_e_cr_tree, hf_openhpsdr_e_cr_prog_fw_ver, tvb,offset,1,ENC_BIG_ENDIAN);
                offset += 1;
 
-               value = tvb_get_guint8(tvb, offset);
-               proto_tree_add_uint_format(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_disc_proto_ver,tvb,offset,1,value,
-                  "openHPSDR Protocol: %d.%.1d",(value/10),(value%10));
+               proto_tree_add_item(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_prog_board,tvb,offset,1,ENC_BIG_ENDIAN);
                offset += 1;
 
-               offset = cr_packet_end_pad(tvb,openhpsdr_e_cr_tree,offset,47);
-               cr_check_length(tvb,pinfo,tree,offset);
+               proto_tree_add_item(openhpsdr_e_cr_tree,hf_openhpsdr_e_cr_prog_fw_cksum,tvb,offset,2,ENC_BIG_ENDIAN);
+               offset += 2;
+
+               offset = cr_packet_end_pad(tvb,openhpsdr_e_cr_tree,offset,45);
+               openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
            }
 
        } else if (cr_command == 0x05) { // 0x05 Program
@@ -12129,7 +12129,7 @@ static void dissect_openhpsdr_e_cr(tvbuff_t *tvb, packet_info *pinfo, proto_tree
                                        data_length,ENC_BIG_ENDIAN);
               proto_item_append_text(append_text_item,": Programing Data (%d Bytes)",256);
               offset +=256;
-              cr_check_length(tvb,pinfo,tree,offset);
+              openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
            }
 
        }
@@ -12197,14 +12197,12 @@ static void dissect_openhpsdr_e_ddcc(tvbuff_t *tvb, packet_info *pinfo, proto_tr
        proto_item *state_tree_ddcc_item = NULL;
        proto_item *config_tree_ddcc_item = NULL;
        proto_item *sync_tree_ddcc_item = NULL;
-       proto_item *mux_tree_ddcc_item = NULL;
 
        proto_tree *openhpsdr_e_ddcc_tree = NULL;
        proto_tree *openhpsdr_e_ddcc_ditram_tree = NULL;
        proto_tree *openhpsdr_e_ddcc_state_tree = NULL;
        proto_tree *openhpsdr_e_ddcc_config_tree = NULL;
        proto_tree *openhpsdr_e_ddcc_sync_tree = NULL;
-       proto_tree *openhpsdr_e_ddcc_mux_tree = NULL;
 
        proto_item *append_text_item = NULL;
        //proto_item *ei_item = NULL;
@@ -13451,24 +13449,13 @@ static void dissect_openhpsdr_e_ddcc(tvbuff_t *tvb, packet_info *pinfo, proto_tr
 
        }
 
-       mux_tree_ddcc_item = proto_tree_add_uint_format(openhpsdr_e_ddcc_tree, hf_openhpsdr_e_ddcc_mux_sub,
-           tvb, offset,1, value,"DDC Multiplex");
-       openhpsdr_e_ddcc_mux_tree = proto_item_add_subtree(mux_tree_ddcc_item,ett_openhpsdr_e_ddcc_mux);
-
-       value = tvb_get_guint8(tvb, offset);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux0, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux1, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux2, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux3, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux4, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux5, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux6, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_ddcc_mux_tree, hf_openhpsdr_e_ddcc_ddc_mux7, tvb,offset, 1, value);
+       // 3.7 Change: Per 3.7 - DDC Multiplex Removed.
+       proto_tree_add_string_format(openhpsdr_e_ddcc_tree,hf_openhpsdr_e_reserved,tvb,offset,1,placehold,
+           "DDC Multiplex - Per 3.7 - DDC Multiplex Removed.");
+// REMOVE ??? for length check ???
        offset += 1;
 
-       cr_check_length(tvb,pinfo,tree,offset);
-
-
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -13536,8 +13523,12 @@ static void dissect_openhpsdr_e_hps(tvbuff_t *tvb, packet_info *pinfo, proto_tre
        proto_item_append_text(append_text_item," Not Used");
 
        proto_tree_add_boolean(openhpsdr_e_hps_tree, hf_openhpsdr_e_hps_pll, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_hps_tree, hf_openhpsdr_e_hps_fifo_empty, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_hps_tree, hf_openhpsdr_e_hps_fifo_full, tvb,offset, 1, value);
+
+       // Remove at some point ?
+       append_text_item = proto_tree_add_boolean(openhpsdr_e_hps_tree, hf_openhpsdr_e_hps_fifo_empty, tvb,offset, 1, value);
+       proto_item_append_text(append_text_item," - As of 3.7: Not Supported");
+       append_text_item = proto_tree_add_boolean(openhpsdr_e_hps_tree, hf_openhpsdr_e_hps_fifo_full, tvb,offset, 1, value);
+       proto_item_append_text(append_text_item," - As of 3.7: Not Supported");
        offset += 1;
 
        value = tvb_get_guint8(tvb, offset);
@@ -13630,7 +13621,7 @@ static void dissect_openhpsdr_e_hps(tvbuff_t *tvb, packet_info *pinfo, proto_tre
        proto_tree_add_boolean(openhpsdr_e_hps_tree, hf_openhpsdr_e_hps_user_logic7, tvb,offset, 1, value);
        offset += 1;
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -13704,7 +13695,9 @@ static void dissect_openhpsdr_e_ducc(tvbuff_t *tvb, packet_info *pinfo, proto_tr
        proto_tree_add_boolean(openhpsdr_e_ducc_tree, hf_openhpsdr_e_ducc_cw_breakin, tvb,offset, 1, value);
        offset += 1;
 
-       proto_tree_add_item(openhpsdr_e_ducc_tree,hf_openhpsdr_e_ducc_cw_sidetone_level, tvb,offset, 1, ENC_BIG_ENDIAN);
+       value = tvb_get_guint8(tvb, offset);
+       proto_tree_add_uint_format(openhpsdr_e_ducc_tree,hf_openhpsdr_e_ducc_cw_sidetone_level, tvb,offset, 1,
+           value, "CW Sidetone Level    : %d",(value & BIT7_MASK));
        offset += 1;
 
        append_text_item = proto_tree_add_item(openhpsdr_e_ducc_tree,hf_openhpsdr_e_ducc_cw_sidetone_freq, tvb,offset, 2,
@@ -13760,19 +13753,19 @@ static void dissect_openhpsdr_e_ducc(tvbuff_t *tvb, packet_info *pinfo, proto_tr
        proto_tree_add_boolean(openhpsdr_e_ducc_tree, hf_openhpsdr_e_ducc_orion_mic_bias, tvb,offset, 1, value);
        offset += 1;
 
+       proto_tree_add_item(openhpsdr_e_ducc_tree,hf_openhpsdr_e_ducc_line_in_gain, tvb,offset, 1, ENC_BIG_ENDIAN);
+       offset += 1;
+
        proto_tree_add_string_format(openhpsdr_e_ducc_tree,hf_openhpsdr_e_reserved ,tvb,offset,7,placehold,
            "Reserved Future Use             : Reserved Future Use");
        offset += 7;
-
-       proto_tree_add_item(openhpsdr_e_ducc_tree,hf_openhpsdr_e_ducc_line_in_gain, tvb,offset, 1, ENC_BIG_ENDIAN);
-       offset += 1;
 
        append_text_item = proto_tree_add_item(openhpsdr_e_ducc_tree,hf_openhpsdr_e_ducc_attn_adc0_duc0, tvb,offset, 1,
            ENC_BIG_ENDIAN);
        proto_item_append_text(append_text_item," dB - Future Use");
        offset += 1;
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -13832,10 +13825,15 @@ static void dissect_openhpsdr_e_micl(tvbuff_t *tvb, packet_info *pinfo, proto_tr
        proto_tree_add_item(openhpsdr_e_micl_tree, hf_openhpsdr_e_micl_sequence_num, tvb,offset, 4, ENC_BIG_ENDIAN);
        offset += 4;
 
+       // All the board types in version 3.7 protocol document have 64 by 16 bit
+       // audio CODEC samples.
+       // Also: "Audio samples per Ethernet packet 64 Left, 64 Right"
        proto_tree_add_string_format(openhpsdr_e_micl_tree, hf_openhpsdr_e_micl_banner,tvb,offset,0,placehold,
-           "Assuming 64 by 16 bit samples");
+           "Assuming 64 by 16 bit samples ");
 
-       // for idx 0 to 719
+       // Version 3.7 protocol document: "Corrected number of audio and mic
+       // samples per packet from 720 to 64"
+       // for idx 0 to 63
        for ( idx=0; idx <= 63; idx++) {
            proto_tree_add_string_format(openhpsdr_e_micl_tree, hf_openhpsdr_e_micl_separator, tvb, offset, 0, placehold,
               "----------------------------------------------------------");
@@ -13849,7 +13847,7 @@ static void dissect_openhpsdr_e_micl(tvbuff_t *tvb, packet_info *pinfo, proto_tr
        }
 
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -13896,10 +13894,12 @@ static void dissect_openhpsdr_e_hpc(tvbuff_t *tvb, packet_info *pinfo, proto_tre
 
    if (tree) {
        proto_item *parent_tree_hpc_item = NULL;
+       proto_item *cwx0_tree_hpc_item = NULL;
        proto_item *ddc_fp_tree_hpc_item = NULL;
        proto_item *alex0_tree_hpc_item = NULL;
 
        proto_tree *openhpsdr_e_hpc_tree = NULL;
+       proto_tree *openhpsdr_e_hpc_cwx0_tree = NULL;
        proto_tree *openhpsdr_e_hpc_ddc_fp_tree = NULL;
        proto_tree *openhpsdr_e_hpc_alex0_tree = NULL;
 
@@ -13923,10 +13923,14 @@ static void dissect_openhpsdr_e_hpc(tvbuff_t *tvb, packet_info *pinfo, proto_tre
        proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_ptt3, tvb,offset, 1, value);
        offset += 1;
 
+       cwx0_tree_hpc_item = proto_tree_add_uint_format(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_cwx0_sub,
+           tvb, offset,1, value,"CWX0");
+       openhpsdr_e_hpc_cwx0_tree = proto_item_add_subtree(cwx0_tree_hpc_item,ett_openhpsdr_e_hpc_cwx0);
+
        value = tvb_get_guint8(tvb, offset);
-       proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_cwx0, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_dot, tvb,offset, 1, value);
-       proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_dash, tvb,offset, 1, value);
+       proto_tree_add_boolean(openhpsdr_e_hpc_cwx0_tree, hf_openhpsdr_e_hpc_cwx0_cwx, tvb,offset, 1, value);
+       proto_tree_add_boolean(openhpsdr_e_hpc_cwx0_tree, hf_openhpsdr_e_hpc_cwx0_dot, tvb,offset, 1, value);
+       proto_tree_add_boolean(openhpsdr_e_hpc_cwx0_tree, hf_openhpsdr_e_hpc_cwx0_dash, tvb,offset, 1, value);
        offset += 1;
 
        append_text_item = proto_tree_add_item(openhpsdr_e_hpc_tree,hf_openhpsdr_e_hpc_cwx1, tvb,offset, 1,
@@ -14074,7 +14078,6 @@ static void dissect_openhpsdr_e_hpc(tvbuff_t *tvb, packet_info *pinfo, proto_tre
        offset += 1;
 
        value = tvb_get_guint8(tvb, offset);
-       proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_open_col0, tvb,offset, 1, value);
        proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_open_col1, tvb,offset, 1, value);
        proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_open_col2, tvb,offset, 1, value);
        proto_tree_add_boolean(openhpsdr_e_hpc_tree, hf_openhpsdr_e_hpc_open_col3, tvb,offset, 1, value);
@@ -14206,7 +14209,7 @@ static void dissect_openhpsdr_e_hpc(tvbuff_t *tvb, packet_info *pinfo, proto_tre
        proto_item_append_text(append_text_item," dB");
        offset += 1;
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -14305,7 +14308,7 @@ static void dissect_openhpsdr_e_wbd(tvbuff_t *tvb, packet_info *pinfo, proto_tre
 
        }
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -14391,7 +14394,7 @@ static void dissect_openhpsdr_e_ddca(tvbuff_t *tvb, packet_info *pinfo, proto_tr
 
        }
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -14494,7 +14497,7 @@ static void dissect_openhpsdr_e_duciq(tvbuff_t *tvb, packet_info *pinfo, proto_t
 
        }
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -14717,7 +14720,7 @@ static void dissect_openhpsdr_e_ddciq(tvbuff_t *tvb, packet_info *pinfo, proto_t
 
        }
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -14815,7 +14818,7 @@ static void dissect_openhpsdr_e_mem(tvbuff_t *tvb, packet_info *pinfo, proto_tre
 
        }
 
-       cr_check_length(tvb,pinfo,tree,offset);
+       openhpsdr_e_check_frame_length(tvb,pinfo,tree,offset);
 
    }
 
@@ -14879,7 +14882,7 @@ proto_reg_handoff_openhpsdr_e(void)
    // register as heuristic dissector
    if (!cr_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_cr_heur,
-                          "openHSPDR Ethernet - Command(Host), Reply(Hardware)",
+                          "OpenHSPDR Ethernet - P2 - Command(Host), Reply(Hardware)",
                           "openhpsdr-e.cr", proto_openhpsdr_e, HEURISTIC_ENABLE);
        cr_initialized = TRUE;
    }
@@ -14890,14 +14893,14 @@ proto_reg_handoff_openhpsdr_e(void)
    // Also the protocol specification allow for any port.
    if (!ddcc_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_ddcc_heur,
-                          "openHSPDR Ethernet - DDC Command (From Host)",
+                          "OpenHSPDR Ethernet - P2 - DDC Command (From Host)",
                           "openhpsdr-e.ddc", proto_openhpsdr_e, HEURISTIC_ENABLE);
        ddcc_initialized = TRUE;
    }
 
    if (!hps_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_hps_heur,
-                          "openHSPDR Ethernet - High Priority Status (From Hardware)",
+                          "OpenHSPDR Ethernet - P2 - High Priority Status (From Hardware)",
                           "openhpsdr-e.hps", proto_openhpsdr_e, HEURISTIC_ENABLE);
        hps_initialized = TRUE;
    }
@@ -14908,14 +14911,14 @@ proto_reg_handoff_openhpsdr_e(void)
    // Also the protocol specification allow for any port.
    if (!ducc_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_ducc_heur,
-                          "openHSPDR Ethernet - DUC Command (From Host)",
+                          "OpenHSPDR Ethernet - P2 - DUC Command (From Host)",
                           "openhpsdr-e.ducc", proto_openhpsdr_e, HEURISTIC_ENABLE);
        ducc_initialized = TRUE;
    }
 
    if (!micl_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_micl_heur,
-                          "openHSPDR Ethernet - Mic / Line Samples (From Hardware)",
+                          "OpenHSPDR Ethernet - P2 - Mic / Line Samples (From Hardware)",
                           "openhpsdr-e.micl", proto_openhpsdr_e, HEURISTIC_ENABLE);
        micl_initialized = TRUE;
    }
@@ -14926,7 +14929,7 @@ proto_reg_handoff_openhpsdr_e(void)
    // Also the protocol specification allow for any port.
    if (!hpc_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_hpc_heur,
-                          "openHSPDR Ethernet - High Priority Command (From Host)",
+                          "OpenHSPDR Ethernet - P2 - High Priority Command (From Host)",
                           "openhpsdr-e.hpc", proto_openhpsdr_e, HEURISTIC_ENABLE);
        hpc_initialized = TRUE;
    }
@@ -14938,7 +14941,7 @@ proto_reg_handoff_openhpsdr_e(void)
 
    if (!wbd_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_wbd_heur,
-                          "openHSPDR Ethernet - Wide Band Data (From Hardware)",
+                          "OpenHSPDR Ethernet - P2 - Wide Band Data (From Hardware)",
                           "openhpsdr-e.wbd", proto_openhpsdr_e, HEURISTIC_ENABLE);
        wbd_initialized = TRUE;
    }
@@ -14948,7 +14951,7 @@ proto_reg_handoff_openhpsdr_e(void)
    // The potocol specification allow for any port.
    if (!ddca_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_ddca_heur,
-                          "openHSPDR Ethernet - DDC Audio (From Host)",
+                          "OpenHSPDR Ethernet - P2 - DDC Audio (From Host)",
                           "openhpsdr-e.ddca", proto_openhpsdr_e, HEURISTIC_ENABLE);
        ddca_initialized = TRUE;
    }
@@ -14958,7 +14961,7 @@ proto_reg_handoff_openhpsdr_e(void)
    // The potocol specification allow for any port.
    if (!duciq_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_duciq_heur,
-                          "openHSPDR Ethernet - DUC I&Q Data (From Host)",
+                          "OpenHSPDR Ethernet - P2 - DUC I&Q Data (From Host)",
                           "openhpsdr-e.duciq", proto_openhpsdr_e, HEURISTIC_ENABLE);
        duciq_initialized = TRUE;
    }
@@ -14968,7 +14971,7 @@ proto_reg_handoff_openhpsdr_e(void)
    // The potocol specification allow for any port.
    if (!ddciq_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_ddciq_heur,
-                          "openHSPDR Ethernet - DDC I&Q Data (From Hardware)",
+                          "OpenHSPDR Ethernet - P2 - DDC I&Q Data (From Hardware)",
                           "openhpsdr-e.ddciq", proto_openhpsdr_e, HEURISTIC_ENABLE);
        ddciq_initialized = TRUE;
    }
@@ -14981,17 +14984,10 @@ proto_reg_handoff_openhpsdr_e(void)
    // The protocol specification allow for any port.
    if (!mem_initialized ) {
        heur_dissector_add("udp", dissect_openhpsdr_e_mem_heur,
-                          "openHSPDR Ethernet - Memory Mapped",
+                          "OpenHSPDR Ethernet - P2 - Memory Mapped",
                           "openhpsdr-e.mem", proto_openhpsdr_e, HEURISTIC_ENABLE);
        mem_initialized = TRUE;
    }
 
-
-   // Register as a normal dissectors
-
-   //DDC Command (ddcc)
-   //openhpsdr_e_handle = create_dissector_handle(dissect_openhpsdr_e_ddcc,proto_openhpsdr_e);
-   //dissector_add_uint("udp.port", HPSDR_E_PORT_DDC_COM,openhpsdr_e_handle);
-   //dissector_add_string
 
 }

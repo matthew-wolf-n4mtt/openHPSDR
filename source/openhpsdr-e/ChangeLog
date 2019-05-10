@@ -1,11 +1,57 @@
-09-JULY-2017 Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
+09-May-2019 Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
+
+Version 0.0.7:
+  - Wireshark version 3.0.1
+  - Changed source file names from openhpsdr to openhpsdr-e.
+  - Added references for Protocol 2 to text strings. 
+    -- Added "P2" to the heuristic dissectors display_name.
+    -- New Name: "OpenHPSDR Ethernet - Protocol 2"
+    -- New Short Name: "HPSDR-ETH_P2"
+    -- No change to Abbreviation: "hpsdr-e" 
+  - Fixed the location of line in gain in DUC Command (DUCC), byte 51.
+  - In High Priority Command (HPC)
+     -- Removed the non-existing 8th open collector.
+     -- Moved CWX0 into a sub menu.
+     -- changed fields:
+        openhpsdr-e.hpc.cwx0    is now openhpsdr-e.hpc.cwx0-cwx
+        openhpsdr-e.hpc.cw-dot  is now openhpsdr-e.hpc.cwx0-dot
+        openhpsdr-e.hpc.cw-dash is now openhpsdr-e.hpc.cwx0-dash
+ - Fixed incorrect multiple use of the same field:
+  -- openhpsdr-e.cr.discovery.mac
+    --- Added fields:
+        openhpsdr-e.cr.erase.mac
+        openhpsdr-e.cr.program.mac
+  -- openhpsdr-e.cr.discovery.board
+    --- Added fields:
+        openhpsdr-e.cr.erase.board
+        openhpsdr-e.cr.program.board
+  -- openhpsdr-e.cr.discovery.proto-ver
+    --- Added field:
+        openhpsdr-e.cr.erase.proto-ver
+  - Version 3.7 Changes
+    --In High Priority Status (HPS) added text string to warn about DUC I&Q FIFO
+      almost full and almost empty are no longer supported as of version 3.7
+      of the protocol.
+      --- Should they be removed at some point in the future?
+     -- Removed Multiplexed Mode
+        --- In DUC Command (DUCC) changed DDC Multiplex sub menu to a warning
+            text string.
+	--- In Command Reply (CR) Hardware Discovery Reply for Full Hardware
+	    Description. DDC Multiplex changed to a warning text string.
+  - Version 3.8 changes
+    -- The DUC Command (DUCC) byte 6, CW side tone level, is definded as a 7
+       bit value. Added a bit mask so that the last bit is not displayed.   
+    -- Open collector numbering changed from starting at 0 to starting at 1.
+    -- Added Beta Version to Command Reply (CR). 
+    -- Changed the format of the Command Reply (CR) Hardware "Response
+       to Program"
 
 Version 0.0.6:
   - Wireshark version 2.2.3
   - Updated to version 3.5 of protocol documentation.
   - Corrected and cleaned up High Priority Command (HPC) Alex0 register map
     bits.
-  - Tested and verified set IP address and firmware programing.
+  - Tested and verified set IP address and firmware programming.
   - Cleaned up Command Reply (CR) Hardware Erase Acknowledgment / Complete.
   - Cleaned up Command Reply (CR) Hardware Program Reply / Acknowledgment.
   - Removed "Program Check Roll Over" test. The last program block from the host
@@ -34,7 +80,7 @@ Version 0.0.4:
   - Added the "Hardware Time Enable" to the Command Reply (CR) General Datagram.
   - Added endianness options.
   - Added I&Q data format options.
-  - Cleaned up formating in attempt to improve understandability.
+  - Cleaned up formatting in attempt to improve understandably.
   - The Plug-in should disassemble every thing that is included in the
     2.9 Protocol Document.
 
