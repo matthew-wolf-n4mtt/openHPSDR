@@ -1,9 +1,9 @@
-/* packet-openhpsdr-e.c
+/* packet_openhpsdr_e.c
  * Routines for the OpenHPSDR Ethernet protocol packet disassembly
  *
- * Version: 0.0.7
+ * Version: 0.0.7.1
  * Author:  Matthew J Wolf, N4MTT
- * Date:    03-MAY-2019
+ * Date:    20-MAY-2019
  *
  * This file is part of the OpenHPSDR-Ethernet (Protocol 2) Plug-in
  * for Wireshark.
@@ -29,8 +29,8 @@
  * If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * The OpenHPSDR Ethernet Plug-in for Wireshark is written to disassemble the protocol
- * that is defined in the documents listed below.
+ * The OpenHPSDR Ethernet Plug-in for Wireshark is written to disassemble the
+ * protocol that is defined in the documents listed below.
  *
  * The protocol is still under development.
  *
@@ -61,10 +61,10 @@
 #include <stdlib.h>
 //#include <string.h>
 //#include <math.h>
-#include "packet-openhpsdr-e.h"
+#include "packet_openhpsdr_e.h"
 
 
-//Port definitions in packet-openhpsdr.h header
+//Port definitions in packet_openhpsd_er.h header
 
 
 //nameing: "From-Host From-Hardware"

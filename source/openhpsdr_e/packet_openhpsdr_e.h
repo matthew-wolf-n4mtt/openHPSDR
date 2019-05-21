@@ -1,9 +1,9 @@
-/* packet-openhpsdr-e.h
+/* packet_openhpsdr_e.h
  * Header file for the OpenHPSDR Ethernet protocol packet disassembly
  *
- * Version: 0.0.7
+ * Version: 0.0.7.1
  * Author:  Matthew J Wolf, N4MTT
- * Date:    03-MAY-2019
+ * Date:    20-MAY-2019
  *
  * This file is part of the OpenHPSDR Plug-in for Wireshark.
  * By Matthew J. Wolf <matthew.wolf.hpsdr@speciosus.net>
